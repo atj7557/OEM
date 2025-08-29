@@ -19,7 +19,7 @@ export default function LoginPage() {
     try {
       const response = await login(username, password);
       if (response.access_token) {
-        router.push("/"); // Redirect to main page
+        router.push("/dashboard"); // Redirect to main page
       }
     } catch (err: any) {
       setError("Invalid username or password");

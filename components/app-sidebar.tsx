@@ -80,6 +80,12 @@ const navigation = [
 export function AppSidebar() {
   const pathname = usePathname()
 
+  // consider a segment-aware active function (handles child URLs too)
+  const isActive = (url: string) => {
+    if (url === "/") return pathname === "/"
+    return pathname === url || pathname.startsWith(url + "/")
+  }
+
   return (
     <Sidebar className="border-r border-gray-200">
       <SidebarHeader className="p-4">
@@ -93,10 +99,11 @@ export function AppSidebar() {
           </div>
         </div>
         <div className="relative mt-4">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <Input placeholder="Search vehicles..." className="pl-10" />
         </div>
       </SidebarHeader>
+
       <SidebarContent>
         {navigation.map((section) => (
           <SidebarGroup key={section.title}>
@@ -105,21 +112,29 @@ export function AppSidebar() {
             </SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                {section.items.map((item) => (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton asChild isActive={pathname === item.url}>
-                      <Link href={item.url} className="flex items-center gap-3">
-                        <item.icon className="w-4 h-4" />
-                        <span>{item.title}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
+                {section.items.map((item) => {
+                  const active = isActive(item.url)
+                  return (
+                    <SidebarMenuItem key={item.title}>
+                      <SidebarMenuButton asChild isActive={active}>
+                        <Link
+                          href={item.url}
+                          className="flex items-center gap-3"
+                          aria-current={active ? "page" : undefined}
+                        >
+                          <item.icon className="w-4 h-4" />
+                          <span>{item.title}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )
+                })}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
         ))}
       </SidebarContent>
+
       <SidebarRail />
     </Sidebar>
   )
