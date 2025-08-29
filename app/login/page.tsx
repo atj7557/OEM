@@ -6,8 +6,8 @@ import { login } from "@/lib/api";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
+  const [username, setUsername] = useState("oemadmin");
+  const [password, setPassword] = useState("oemadmin123");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 

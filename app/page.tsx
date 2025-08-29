@@ -3,14 +3,25 @@
 import { useEffect, useMemo, useState } from "react";
 import AuthGuard from "@/components/AuthGuard";
 
-// keep your shadcn layout primitives
+// shadcn/ui primitives
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Bell, Settings } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
-// keep your existing UI components from the zip
+// icons
+import { Bell, Settings, LogOut, User as UserIcon } from "lucide-react";
+
+// zip components
 import { FleetKPIBar } from "@/components/fleet-kpi-bar";
 import { TelemetryWidget } from "@/components/telemetry-widget";
 import { AlertsTimeline } from "@/components/alerts-timeline";
@@ -19,7 +30,7 @@ import { VehiclesTable } from "@/components/vehicles-table";
 // live API helpers
 import { listOBDDevices, getDeviceMetrics } from "@/lib/api";
 
-// ----- Types aligned to your zip components -----
+// ----- Types -----
 type SimCard = {
   id: number;
   sim_id: string;
@@ -61,6 +72,13 @@ type AlertItem = {
   ago: string;
 };
 
+type User = {
+  id: number;
+  name: string;
+  email: string;
+  avatarUrl?: string | null;
+};
+
 function fmtAgo(iso?: string | null): string {
   if (!iso) return "—";
   const ts = Date.parse(iso);
@@ -79,10 +97,36 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
 
-  // (optional) cache SoC per device — will fill when you plug the real metrics endpoint
   const [socByDeviceId, setSocByDeviceId] = useState<Record<number, number | null>>({});
 
-  // 1) Load devices (live)
+  // ---- User state ----
+  const [user, setUser] = useState<User | null>(null);
+
+  // fetch profile from login API
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch("/api/auth/me", { credentials: "include" });
+        if (!res.ok) throw new Error("Failed to load profile");
+        const data = await res.json();
+        setUser(data);
+      } catch {
+        setUser(null);
+      }
+    })();
+  }, []);
+
+  // logout handler
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
+    } finally {
+      setUser(null);
+      window.location.href = "/login"; // redirect to login page
+    }
+  };
+
+  // 1) Load devices
   useEffect(() => {
     (async () => {
       try {
@@ -102,11 +146,11 @@ export default function Dashboard() {
     })();
   }, []);
 
-  // 2) Optionally load SoC (does nothing until you implement getDeviceMetrics in lib/api.ts)
+  // 2) Load SoC
   useEffect(() => {
     (async () => {
       if (!devices.length) return;
-      const subset = devices.slice(0, 10); // avoid spamming endpoints
+      const subset = devices.slice(0, 10);
       const updates: Record<number, number | null> = {};
       await Promise.all(
         subset.map(async (d) => {
@@ -124,7 +168,7 @@ export default function Dashboard() {
     })();
   }, [devices]);
 
-  // 3) Derive all the live numbers for your UI
+  // 3) Derive UI numbers
   const {
     totalDevices,
     activeDevices,
@@ -148,7 +192,6 @@ export default function Dashboard() {
       return !Number.isNaN(ts) && now - ts <= RECENT_MS;
     }).length;
 
-    // build simple alerts list from device condition (keeps your UI look)
     const built: AlertItem[] = [];
     devices.forEach((d) => {
       const vehicleLabel = d.device_id || `Device-${d.id}`;
@@ -198,7 +241,6 @@ export default function Dashboard() {
 
     const pick = devices.find((d) => d.is_active) || devices[0];
 
-    // average SoC (becomes live once getDeviceMetrics returns values)
     const socValues = devices
       .map((d) => socByDeviceId[d.id])
       .filter((v): v is number => typeof v === "number");
@@ -221,11 +263,8 @@ export default function Dashboard() {
   return (
     <AuthGuard>
       <SidebarProvider>
-        {/* If your zip has an AppSidebar component, you can render it here.
-            Otherwise we keep only the inset so your header + content look the same. */}
-
         <SidebarInset>
-          {/* ===== Header (kept same look) ===== */}
+          {/* ===== Header ===== */}
           <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4 bg-white">
             <SidebarTrigger className="-ml-1" />
             <Separator orientation="vertical" className="mr-2 h-4" />
@@ -243,12 +282,50 @@ export default function Dashboard() {
               <Button variant="ghost" size="sm" title="Settings">
                 <Settings className="w-4 h-4" />
               </Button>
+
+              {/* ---- User Dropdown ---- */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Avatar className="h-8 w-8 cursor-pointer">
+                    {user?.avatarUrl ? (
+                      <AvatarImage src={user.avatarUrl} alt={user.name} />
+                    ) : (
+                      <AvatarFallback>
+                        {user?.name?.[0] ?? <UserIcon className="h-4 w-4" />}
+                      </AvatarFallback>
+                    )}
+                  </Avatar>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel>
+                    {user ? (
+                      <div>
+                        <p className="font-medium">{user.name}</p>
+                        <p className="text-xs text-gray-500">{user.email}</p>
+                      </div>
+                    ) : (
+                      "Not logged in"
+                    )}
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {user ? (
+                    <DropdownMenuItem onClick={handleLogout}>
+                      <LogOut className="mr-2 h-4 w-4" /> Logout
+                    </DropdownMenuItem>
+                  ) : (
+                    <DropdownMenuItem asChild>
+                      <a href="/login">
+                        <UserIcon className="mr-2 h-4 w-4" /> Login
+                      </a>
+                    </DropdownMenuItem>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </header>
 
-          {/* ===== Main content (kept same sections) ===== */}
+          {/* ===== Main Content ===== */}
           <div className="flex-1 space-y-6 p-6 bg-gray-50">
-            {/* Fleet KPIs — same UI component, but now fed by live values */}
             <section>
               <h2 className="text-lg font-semibold text-gray-900 mb-4">Fleet Overview</h2>
               <FleetKPIBar
@@ -256,7 +333,7 @@ export default function Dashboard() {
                 vehiclesOnline={reportingRecently}
                 totalVehicles={totalDevices}
                 criticalAlerts={alertsCount}
-                averageSocPercent={averageSocPercent} // becomes live when metrics endpoint is wired
+                averageSocPercent={averageSocPercent}
                 maintenanceTickets={null}
                 trendOnline="up"
                 changeOnline="+2.3%"
@@ -269,20 +346,13 @@ export default function Dashboard() {
               />
             </section>
 
-            {/* Live Telemetry — same UI, shows details for a selected device */}
             <section>
               <h2 className="text-lg font-semibold text-gray-900 mb-4">
                 Live Telemetry – {selectedDevice?.device_id ?? "Select a Device"}
               </h2>
-              <TelemetryWidget
-                selectedDeviceId={selectedDevice?.device_id}
-                devices={devices}
-                loading={loading}
-                error={err}
-              />
+              <TelemetryWidget selectedDeviceId={selectedDevice?.device_id} devices={devices} loading={loading} error={err} />
             </section>
 
-            {/* Alerts + Vehicles — same layout */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <div className="lg:col-span-1">
                 <AlertsTimeline loading={loading} error={err} alerts={alerts} />
@@ -292,7 +362,6 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* Optional debug (handy for confirming live API data) */}
             {!loading && !err && (
               <details className="mt-2">
                 <summary className="cursor-pointer text-sm text-gray-500">

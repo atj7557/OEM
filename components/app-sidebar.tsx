@@ -37,7 +37,7 @@ const navigation = [
   {
     title: "Overview",
     items: [
-      { title: "Dashboard", icon: Home, url: "/" },
+      { title: "Dashboard", icon: Home, url: "/dashboard" },
       { title: "Analytics", icon: BarChart3, url: "/analytics" },
     ],
   },
@@ -47,6 +47,7 @@ const navigation = [
       { title: "Vehicles", icon: Car, url: "/vehicles" },
       { title: "Vehicle Types", icon: List, url: "/vehicle-types" },
       { title: "Add Vehicle", icon: Plus, url: "/vehicles/add" },
+      { title: "OBD Device", icon: Plus, url: "/vehicles/" },
     ],
   },
   {

@@ -162,9 +162,9 @@ import axios, {
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ||
-  "https://joulepoint.platform-api-test.joulepoint.com"
+  // "https://joulepoint.platform-api-test.joulepoint.com"
+"https://oem.platform-api-test.joulepoint.com"
 
-// Create Axios instance
 const api: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
   headers: {
@@ -219,10 +219,18 @@ api.interceptors.response.use(
  * ✅ AUTHENTICATION
  */
 export const login = async (username: string, password: string) => {
-  const response = await api.post("/api/users/login_with_password/", {
-    username,
-    password,
-  })
+  // Use a direct axios call (not the api instance with interceptor)
+  const response = await axios.post(
+    `${API_BASE_URL}/api/users/login_with_password/`,
+    { username, password },
+    {
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+    }
+  )
+
   const { access_token, refresh_token } = response.data
   if (typeof window !== "undefined") {
     localStorage.setItem("access_token", access_token)
@@ -230,6 +238,9 @@ export const login = async (username: string, password: string) => {
   }
   return response.data
 }
+
+
+
 
 export const refreshAccessToken = async (): Promise<string | null> => {
   const refreshToken =
@@ -294,15 +305,50 @@ export const getUserPermissions = async (userId: number) => {
 /**
  * ✅ FLEET & VEHICLES
  */
-// lib/api.ts
 export const listVehicles = async () => {
-  const response = await api.get("/api/fleet/vehicles/");
-  return response.data.results; // <-- return array directly
+  const response = await api.get("/api/fleet/vehicles/")
+  return response.data.results
+}
+export const createVehicle = async (payload: any) => {
+  const res = await api.post("/api/fleet/vehicles/", payload);
+  return res.data;
 };
-
-
+export const updateVehicle = async (id: number, payload: any) => {
+  const res = await api.put(`/api/fleet/vehicles/${id}/`, payload);
+  return res.data;
+};
 export const getVehicle = async (id: number) => {
   const res = await api.get(`/api/fleet/vehicles/${id}/`)
+  return res.data
+}
+//vehicle types
+// export const listVehiclesType = async () => {
+//   const response = await api.get("/api/fleet/vehicle-types/")
+//   return response.data.results
+// }
+// in lib/api.ts
+export const listVehiclesType = async (page: number = 1) => {
+  const response = await api.get(`/api/fleet/vehicle-types/?page=${page}`);
+  return response.data; // backend should return results + count or next/prev
+};
+
+// Create a new vehicle type
+export const createVehicleType = async (payload: any) => {
+  const response = await api.post("/api/fleet/vehicle-types/", payload);
+  return response.data;
+};
+export const updateVehicleType = async (id: number, payload: any) => {
+  const response = await api.put(`/api/fleet/vehicle-types/${id}/`, payload);
+  return response.data;
+};
+
+// Delete a vehicle type by ID
+export const deleteVehicleType = async (id: number) => {
+  const response = await api.delete(`/api/fleet/vehicle-types/${id}/`);
+  return response.data;
+};
+export const getVehicleType = async (id: number) => {
+  const res = await api.get(`api/fleet/vehicle-types/${id}/`)
   return res.data
 }
 
@@ -323,9 +369,14 @@ export const getOBDDevice = async (id: number) => {
  * ✅ SIM MANAGEMENT
  */
 export const listSIMCards = async () => {
-  const res = await api.get("/api/fleet/sims/")
+  const res = await api.get("/api/fleet/sim-cards/")
   return res.data
 }
+export const createSIM = async (data: any) => {
+  const res = await api.post("/api/fleet/sim-cards/", data);
+  return res.data;
+};
+
 
 /**
  * ✅ GENERIC HELPERS
@@ -339,5 +390,9 @@ export const postRequest = async (url: string, data: any = {}) => {
   const res = await api.post(url, data)
   return res.data
 }
-
+// alert api
+export const listAlerts = async () => {
+  const res = await api.get("/api/fleet/alerts/")
+  return res.data
+}
 export default api

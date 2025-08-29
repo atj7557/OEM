@@ -277,7 +277,7 @@ export default function Dashboard() {
           <Separator orientation="vertical" className="mr-2 h-4" />
           <div className="flex-1">
             <h1 className="font-semibold text-gray-900">Fleet Dashboard</h1>
-            <p className="text-sm text-gray-500">Real-time diagnostics and fleet management</p>
+            <p className="text-sm text-gray-500">Real-time diagnostics and fleet management yt </p>
           </div>
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="sm" className="relative" title="Alerts">
